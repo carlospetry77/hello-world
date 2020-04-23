@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------------
 // Copyright 2018 Thiago Alves
 // This file is part of the OpenPLC Software Stack.
-//
+// Modified by Carlos Petry. April 2020
+//Changes: Add a serial port to gpio pins. 
 // OpenPLC is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -45,6 +46,7 @@ unsigned long __tick = 0;
 pthread_mutex_t bufferLock; //mutex for the internal buffers
 pthread_mutex_t logLock; //mutex for the internal log
 uint8_t run_openplc = 1; //Variable to control OpenPLC Runtime execution
+unit8_t flag = 0; //Variable que permite habilitar el pid de salida que controla MAX485
 unsigned char log_buffer[1000000]; //A very large buffer to store all logs
 int log_index = 0;
 int log_counter = 0;
@@ -268,9 +270,12 @@ int main(int argc,char **argv)
         handleSpecialFunctions();
 		config_run__(__tick++); // execute plc program logic
 		updateCustomOut();
+		flag = 1; //Habilito bandera para seleccionar a MAX 485 como transmisor.
+		controlComm(); //Llamo a funcion que se encarga de controlar la salida.
         updateBuffersOut_MB(); //update slave devices with data from the output image table
 		pthread_mutex_unlock(&bufferLock); //unlock mutex
-
+		flag = 0; //Seteo nuevamente el modo de operacion de MAX485 como receptor
+		cotrolComm();
 		updateBuffersOut(); //write output image
         
 		updateTime();
