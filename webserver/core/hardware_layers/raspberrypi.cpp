@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------------------
 // Copyright 2015 Thiago Alves
 //
+// Modified by Carlos Petry April 2020.
 // Based on the LDmicro software by Jonathan Westhues
 // This file is part of the OpenPLC Software Stack.
 //
@@ -39,9 +40,9 @@
     #define ARRAY_SIZE(x) (sizeof((x)) / sizeof((x)[0]))
 #endif
 
-#define MAX_INPUT 		14
-#define MAX_OUTPUT 		11
-#define MAX_ANALOG_OUT	1
+#define MAX_INPUT 		1
+#define MAX_OUTPUT 		1
+#define MAX_ANALOG_OUT		0
 
 /********************I/O PINS CONFIGURATION*********************
  * A good source for RaspberryPi I/O pins information is:
@@ -52,16 +53,18 @@
 ****************************************************************/
 //inBufferPinMask: pin mask for each input, which
 //means what pin is mapped to that OpenPLC input
-int inBufferPinMask[MAX_INPUT] = { 8, 9, 7, 0, 2, 3, 12, 13, 14, 21, 22, 23, 24, 25 };
+int inBufferPinMask[MAX_INPUT] = { 8 };
 
 //outBufferPinMask: pin mask for each output, which
 //means what pin is mapped to that OpenPLC output
-int outBufferPinMask[MAX_OUTPUT] =	{ 15, 16, 4, 5, 6, 10, 11, 26, 27, 28, 29 };
+int outBufferPinMask[MAX_OUTPUT] =	{ 4 };
 
 //analogOutBufferPinMask: pin mask for the analog PWM
 //output of the RaspberryPi
-int analogOutBufferPinMask[MAX_ANALOG_OUT] = { 1 };
+int analogOutBufferPinMask[MAX_ANALOG_OUT] = { };
 
+//Salida de control de MAX485.
+int ctrl = 1;
 //-----------------------------------------------------------------------------
 // This function is called by the main OpenPLC routine when it is initializing.
 // Hardware initialization procedures should be here.
@@ -90,7 +93,8 @@ void initializeHardware()
 	    if (pinNotPresent(ignored_bool_outputs, ARRAY_SIZE(ignored_bool_outputs), i))
 	    	pinMode(outBufferPinMask[i], OUTPUT);
 	}
-
+	pinMode(ctrl, OUTPUT);
+	digitalWrite(ctrl, FALSE);
 	//set PWM pins as output
 	for (int i = 0; i < MAX_ANALOG_OUT; i++)
 	{
@@ -149,5 +153,14 @@ void updateBuffersOut()
     		if (int_output[i] != NULL) pwmWrite(analogOutBufferPinMask[i], (*int_output[i] / 64));
 	}
 
+	pthread_mutex_unlock(&bufferLock); //unlock mutex
+}
+//--------------------------------------------------------------------------------
+// Funcion que se encarga de controlar el pin que selecciona a MAX485 como Transmisor o Receptor.
+//---------------------------------------------------------------------------------
+void controlComm()
+{
+	pthread_mutex_lock(&bufferLock); //lock mutex
+	digitalWrite(ctrl,flag);
 	pthread_mutex_unlock(&bufferLock); //unlock mutex
 }
